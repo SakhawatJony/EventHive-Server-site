@@ -40,6 +40,43 @@ app.get('/events',async(req,res)=>{
     const result=await cursor.toArray()
     res.send(result)
 })
+app.get('/events/pagination',async(req,res)=>{
+  const page=parseInt(req.query.page)
+  const size=parseInt(req.query.size)
+  const result=await eventCollection.find().skip(page*size).limit(size).toArray()
+  res.send(result)
+})
+app.get('/events/:id',async(req,res)=>{
+    const id=req.params.id;
+    const query={_id:new ObjectId(id)}
+    const result=await eventCollection.findOne(query)
+    res.send(result)
+})
+app.patch('/events/:id',async(req,res)=>{
+  const id=req.params.id;
+  const query={_id:new ObjectId(id)}
+  const event=req.body;
+  const updateEvent={
+    $set:{
+      title:event.title,
+      date:event.date,
+      category:event.category,
+      ticketTypes:[{type:event.ticketTypes[0].type,price:event.ticketTypes[0].price,quantity:event.ticketTypes[0].quantity}],
+      location:event.location,
+      description:event.description,
+      image:event.image,
+      time:event.time
+    }
+  }
+  const result=await eventCollection.updateOne(query,updateEvent)
+  res.send(result)
+})
+app.delete('/events/:id',async(req,res)=>{
+        const id=req.params.id;
+   const query={_id:new ObjectId(id)}
+   const result=await eventCollection.deleteOne(query)
+   res.send(result)
+  })
 
   app.post('/users',async(req,res)=>{
     const user=req.body
@@ -88,6 +125,11 @@ app.get('/users',async(req,res)=>{
     const cursor=userCollection.find()
     const result=await cursor.toArray()
     res.send(result)
+})
+app.get('/admin-stats',async(req,res)=>{
+  const events=await eventCollection.estimatedDocumentCount()
+  const users=await userCollection.estimatedDocumentCount()
+  res.send({events,users})
 })
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
