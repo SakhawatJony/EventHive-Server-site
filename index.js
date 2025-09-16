@@ -29,7 +29,29 @@ async function run() {
   const database=client.db('EventHive')
   const userCollection=database.collection('users')
    const eventCollection=database.collection('events')
-
+  const bookedEventCollection=database.collection('BookedEvents')
+app.post('/bookedEvents',async(req,res)=>{
+  const bookedEvent=req.body
+  const result=await bookedEventCollection.insertOne(bookedEvent)
+  res.send(result)
+})
+app.get('/bookedEvents',async(req,res)=>{
+    const cursor=bookedEventCollection.find()
+    const result=await cursor.toArray()
+    res.send(result)
+})
+app.get('/bookedEvents/email/:email',async(req,res)=>{
+  const email=req.params.email
+  const query={email:email}
+    const result=await bookedEventCollection.find(query).toArray()
+    res.send(result)
+})
+app.delete('/bookedEvents/:id',async(req,res)=>{
+        const id=req.params.id;
+   const query={_id:new ObjectId(id)}
+   const result=await bookedEventCollection.deleteOne(query)
+   res.send(result)
+  })
 app.post('/events',async(req,res)=>{
   const event=req.body
   const result=await eventCollection.insertOne(event)
@@ -61,7 +83,9 @@ app.patch('/events/:id',async(req,res)=>{
       title:event.title,
       date:event.date,
       category:event.category,
-      ticketTypes:[{type:event.ticketTypes[0].type,price:event.ticketTypes[0].price,quantity:event.ticketTypes[0].quantity}],
+      ticketTypes:[{type:event.ticketTypes[0].type,price:event.ticketTypes[0].price,quantity:event.ticketTypes[0].quantity},
+    {type:event.ticketTypes[1].type,price:event.ticketTypes[1].price,quantity:event.ticketTypes[1].quantity},
+  {type:event.ticketTypes[2].type,price:event.ticketTypes[2].price,quantity:event.ticketTypes[2].quantity}],
       location:event.location,
       description:event.description,
       image:event.image,
@@ -70,6 +94,36 @@ app.patch('/events/:id',async(req,res)=>{
   }
   const result=await eventCollection.updateOne(query,updateEvent)
   res.send(result)
+})
+app.patch('/events/vip/:id',async(req,res)=>{
+  const id=req.params.id;
+  const event=req.body;
+   const result = await eventCollection.updateOne(
+      { _id: new ObjectId(id), "ticketTypes.type": "VIP" }, // find VIP type
+      { $set: { "ticketTypes.$.quantity": event.vip } }     // update only VIP quantity
+    );
+
+    res.send(result);
+})
+app.patch('/events/regular/:id',async(req,res)=>{
+  const id=req.params.id;
+  const event=req.body;
+   const result = await eventCollection.updateOne(
+      { _id: new ObjectId(id), "ticketTypes.type": "Regular" }, // find Regular type
+      { $set: { "ticketTypes.$.quantity": event.regular } }     // update only Regular quantity
+    );
+
+    res.send(result);
+})
+app.patch('/events/student/:id',async(req,res)=>{
+  const id=req.params.id;
+  const event=req.body;
+   const result = await eventCollection.updateOne(
+      { _id: new ObjectId(id), "ticketTypes.type": "Student" }, // find Student type
+      { $set: { "ticketTypes.$.quantity": event.student } }     // update only Regular quantity
+    );
+
+    res.send(result);
 })
 app.delete('/events/:id',async(req,res)=>{
         const id=req.params.id;
@@ -129,7 +183,8 @@ app.get('/users',async(req,res)=>{
 app.get('/admin-stats',async(req,res)=>{
   const events=await eventCollection.estimatedDocumentCount()
   const users=await userCollection.estimatedDocumentCount()
-  res.send({events,users})
+  const soldTicket=await bookedEventCollection.estimatedDocumentCount()
+  res.send({events,users,soldTicket})
 })
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
